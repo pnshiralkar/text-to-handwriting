@@ -200,7 +200,7 @@ def generate(args_text, args, sess, translation):
         print(text, end=' ', flush=True)
         if cuur_line >= lines_per_page:
             ax.set_aspect('equal')
-            plt.axis('on')
+            plt.axis('off')
             figfile = BytesIO()
             print("\n\nProcessing page No. {}...\nCreating image...".format(curr_page), flush=True)
             plt.savefig(figfile, format='png')
@@ -212,6 +212,12 @@ def generate(args_text, args, sess, translation):
             with open(image_out, 'wb') as fl:
                 for x in figfile1:
                     fl.write(x)
+            from PIL import Image
+            img = Image.open(image_out)
+            img.load()
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            background.paste(img, mask=img.split()[3])  # 3 is the alpha channel
+            background.save(image_out.replace('.png', '.jpg'), 'JPEG', quality=100)
 
             print("\nPage No. {} done!\n\n".format(curr_page), flush=True)
 
@@ -225,7 +231,7 @@ def generate(args_text, args, sess, translation):
             cuur_line=1
 
     ax.set_aspect('equal')
-    plt.axis('on')
+    plt.axis('off')
     figfile = BytesIO()
     print("\n\nProcessing page No. {}...\nCreating image...".format(curr_page), flush=True)
     plt.savefig(figfile, format='png')
@@ -237,10 +243,22 @@ def generate(args_text, args, sess, translation):
     with open(image_out, 'wb') as fl:
         for x in figfile1:
             fl.write(x)
+    from PIL import Image
+    img = Image.open(image_out)
+    img.load()
+    background = Image.new("RGB", img.size, (255, 255, 255))
+    background.paste(img, mask=img.split()[3])  # 3 is the alpha channel
+    background.save(image_out.replace('.png', '.jpg'), 'JPEG', quality=100)
 
     print("\nPage No. {} done!\n\n".format(curr_page), flush=True)
 
-    return figfile1
+    # Generate PDF
+    from PIL import Image
+    img1 = Image.open('pages/page1.jpg')
+    im_list = [Image.open('pages/page{}.jpg'.format(i) ) for i in range(2, curr_page+1)]
+    img1.save('handwritten.pdf', "PDF", resolution=100.0, save_all=True, append_images=im_list)
+
+    return "handwritten.pdf"
 
 
 def main():
@@ -269,14 +287,8 @@ def main():
             args.style = bottle.request.json['style']
             args.bias = bottle.request.json['bias']
 
-            img_stream = generate(args_text, args, sess, translation)
-            image_out = 'out1.png'
-            with open(image_out, 'wb') as fl:
-                for x in img_stream:
-                    fl.write(x)
-            img_stream.seek(0)
-            bottle.response.set_header('Content-type', 'image/png')
-            return img_stream
+            pdf = generate(args_text, args, sess, translation)
+            return bottle.static_file(pdf, root='./')
 
         port = os.environ.get("PORT")
         port = port if port else 8000
