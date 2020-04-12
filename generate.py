@@ -1,12 +1,12 @@
 import argparse
-import bottle
-import matplotlib
-import numpy as np
 import os
 import pickle
-import tensorflow as tf
 from collections import namedtuple
 from io import BytesIO
+
+import matplotlib
+import numpy as np
+import tensorflow as tf
 
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
@@ -14,12 +14,14 @@ import matplotlib.pyplot as plt
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', dest='model_path', type=str, default=os.path.join('pretrained', 'model-29'))
 parser.add_argument('--text', dest='text', type=str, default=None)
+parser.add_argument('--text-file', dest='file', type=str, default=None)
 parser.add_argument('--style', dest='style', type=int, default=None)
 parser.add_argument('--bias', dest='bias', type=float, default=1.)
 parser.add_argument('--force', dest='force', action='store_true', default=False)
 parser.add_argument('--animation', dest='animation', action='store_true', default=False)
 parser.add_argument('--noinfo', dest='info', action='store_false', default=True)
 parser.add_argument('--save', dest='save', type=str, default=None)
+parser.add_argument('--output', dest='output', type=str, default='./handwritten.pdf')
 args = parser.parse_args()
 
 
@@ -126,6 +128,7 @@ from PIL import Image
 
 
 def add_color(color, image_out):
+    print("Applying color : ", color)
     img = Image.open(image_out)
     width, height = img.size
     for x in range(width):
@@ -142,10 +145,10 @@ def add_color(color, image_out):
 
 
 ##################################################################
-##################### The Generator Function #####################
+#                     The Generator Function                     #
 ##################################################################
 
-def generate(args_text, args, sess, translation):
+def generate(args_text, args, sess, translation, text_color=[0, 0, 0]):
     style = None
     if args.style is not None:
         style = None
@@ -166,69 +169,73 @@ def generate(args_text, args, sess, translation):
     text_remaining = len(args_text)
     lines_per_page = 20
     curr_page = 1
-    cuur_line=1
+    cuur_line = 1
 
     fig, ax = plt.subplots(1, 1)
-    plt.figure(num=None, figsize=(70, 5 * min(lines_per_page, text_remaining // 50)), dpi=40, facecolor='w', edgecolor='k')
+    plt.figure(num=None, figsize=(70, 5 * min(lines_per_page, text_remaining // 50 + args_text.count('\n'))), dpi=40,
+               facecolor='w', edgecolor='k')
 
     print('Writing...')
-    for text_without_spaces in args_text.split():
-        text = " {} ".format(text_without_spaces)
-        phi_data, window_data, kappa_data, stroke_data, coords = sample_text(sess, text, translation, args.bias, style)
+    for multiline_text in args_text.split(' '):
+        for text_without_spaces in multiline_text.split('\n'):
+            text = " {} ".format(text_without_spaces)
+            phi_data, window_data, kappa_data, stroke_data, coords = sample_text(sess, text, translation, args.bias,
+                                                                                 style)
 
-        if currentLen + len(text_without_spaces) > line_length:
-            # print(currentLen)
-            currentY += line_height
-            currentX = 0
-            currentLen = 0
-            print('')
-            cuur_line += 1
+            if currentLen + len(text_without_spaces) > line_length or multiline_text.split('\n').index(
+                    text_without_spaces) > 0:
+                # print(currentLen)
+                currentY += line_height
+                currentX = 0
+                currentLen = 0
+                print('')
+                cuur_line += 1
 
-        strokes = np.array(stroke_data)
-        epsilon = 1e-8
-        strokes[:, :2] = np.cumsum(strokes[:, :2], axis=0)
-        minx, maxx = np.min(strokes[:, 0]), np.max(strokes[:, 0])
-        miny, maxy = np.min(strokes[:, 1]), np.max(strokes[:, 1])
+            strokes = np.array(stroke_data)
+            epsilon = 1e-8
+            strokes[:, :2] = np.cumsum(strokes[:, :2], axis=0)
+            minx, maxx = np.min(strokes[:, 0]), np.max(strokes[:, 0])
+            miny, maxy = np.min(strokes[:, 1]), np.max(strokes[:, 1])
 
-        for stroke in split_strokes(cumsum(np.array(coords))):
-            if np.min(stroke[:, 0]) > maxx - 2 and np.max(stroke[:, 0]) < maxx + 2:
-                continue
-            plt.plot(stroke[:, 0] + currentX, -stroke[:, 1] + currentY)
-        currentX += maxx - 2
-        currentLen += len(text_without_spaces) + 1
-        text_remaining -= (len(text_without_spaces) + 1)
-        print(text, end=' ', flush=True)
-        if cuur_line >= lines_per_page:
-            ax.set_aspect('equal')
-            plt.axis('off')
-            figfile = BytesIO()
-            print("\n\nProcessing page No. {}...\nCreating image...".format(curr_page), flush=True)
-            plt.savefig(figfile, format='png')
-            figfile.seek(0)  # rewind to beginning of file
-            print("Colouring text...", flush=True)
-            figfile1 = add_color([0, 0, 0], figfile)
-            print("Saving image...", flush=True)
-            image_out = 'pages/page{}.png'.format(curr_page)
-            with open(image_out, 'wb') as fl:
-                for x in figfile1:
-                    fl.write(x)
-            from PIL import Image
-            img = Image.open(image_out)
-            img.load()
-            background = Image.new("RGB", img.size, (255, 255, 255))
-            background.paste(img, mask=img.split()[3])  # 3 is the alpha channel
-            background.save(image_out.replace('.png', '.jpg'), 'JPEG', quality=100)
+            for stroke in split_strokes(cumsum(np.array(coords))):
+                if np.min(stroke[:, 0]) > maxx - 2 and np.max(stroke[:, 0]) < maxx + 2:
+                    continue
+                plt.plot(stroke[:, 0] + currentX, -stroke[:, 1] + currentY)
+            currentX += maxx - 2
+            currentLen += len(text_without_spaces) + 1
+            text_remaining -= (len(text_without_spaces) + 1)
+            print(text, end=' ', flush=True)
+            if cuur_line >= lines_per_page:
+                ax.set_aspect('equal')
+                plt.axis('off')
+                figfile = BytesIO()
+                print("\n\nProcessing page No. {}...\nCreating image...".format(curr_page), flush=True)
+                plt.savefig(figfile, format='png')
+                figfile.seek(0)  # rewind to beginning of file
+                print("Colouring text...", flush=True)
+                figfile1 = add_color(text_color, figfile)
+                print("Saving image...", flush=True)
+                image_out = 'pages/page{}.png'.format(curr_page)
+                with open(image_out, 'wb') as fl:
+                    for x in figfile1:
+                        fl.write(x)
+                from PIL import Image
+                img = Image.open(image_out)
+                img.load()
+                background = Image.new("RGB", img.size, (255, 255, 255))
+                background.paste(img, mask=img.split()[3])  # 3 is the alpha channel
+                background.save(image_out.replace('.png', '.jpg'), 'JPEG', quality=100)
 
-            print("\nPage No. {} done!\n\n".format(curr_page), flush=True)
+                print("\nPage No. {} done!\n\n".format(curr_page), flush=True)
 
-            fig, ax = plt.subplots(1, 1)
-            plt.figure(num=None, figsize=(70, 5 * min(lines_per_page, text_remaining // 50)), dpi=40, facecolor='w',
-                       edgecolor='k')
-            curr_page += 1
-            currentX=0
-            currentY=0
-            currentLen = 0
-            cuur_line=1
+                fig, ax = plt.subplots(1, 1)
+                plt.figure(num=None, figsize=(70, 5 * min(lines_per_page, text_remaining // 50 + args_text[args_text.index(text_without_spaces):].count('\n'))), dpi=40, facecolor='w',
+                           edgecolor='k')
+                curr_page += 1
+                currentX = 0
+                currentY = 0
+                currentLen = 0
+                cuur_line = 1
 
     ax.set_aspect('equal')
     plt.axis('off')
@@ -237,7 +244,7 @@ def generate(args_text, args, sess, translation):
     plt.savefig(figfile, format='png')
     figfile.seek(0)  # rewind to beginning of file
     print("Colouring text...", flush=True)
-    figfile1 = add_color([0, 0, 0], figfile)
+    figfile1 = add_color(text_color, figfile)
     print("Saving image...", flush=True)
     image_out = 'pages/page{}.png'.format(curr_page)
     with open(image_out, 'wb') as fl:
@@ -253,47 +260,10 @@ def generate(args_text, args, sess, translation):
     print("\nPage No. {} done!\n\n".format(curr_page), flush=True)
 
     # Generate PDF
+    print('\nGenerating PDF...', end='')
     from PIL import Image
     img1 = Image.open('pages/page1.jpg')
-    im_list = [Image.open('pages/page{}.jpg'.format(i) ) for i in range(2, curr_page+1)]
-    img1.save('handwritten.pdf', "PDF", resolution=100.0, save_all=True, append_images=im_list)
-
-    return "handwritten.pdf"
-
-
-def main():
-    with open(os.path.join('data', 'translation.pkl'), 'rb') as file:
-        translation = pickle.load(file)
-    rev_translation = {v: k for k, v in translation.items()}
-    charset = [rev_translation[i] for i in range(len(rev_translation))]
-    charset[0] = ''
-
-    config = tf.ConfigProto(
-        device_count={'GPU': 0}
-    )
-    app = bottle.Bottle()
-
-    @app.post("/")
-    def home():
-        return '''https://github.com/theSage21/handwriting-generation'''
-
-    with tf.Session(config=config) as sess:
-        saver = tf.train.import_meta_graph(args.model_path + '.meta')
-        saver.restore(sess, args.model_path)
-
-        @app.post("/write")
-        def write_post():
-            args_text = bottle.request.json['text']
-            args.style = bottle.request.json['style']
-            args.bias = bottle.request.json['bias']
-
-            pdf = generate(args_text, args, sess, translation)
-            return bottle.static_file(pdf, root='./')
-
-        port = os.environ.get("PORT")
-        port = port if port else 8000
-        app.run(port=port, host='0.0.0.0')
-
-
-if __name__ == '__main__':
-    main()
+    im_list = [Image.open('pages/page{}.jpg'.format(i)) for i in range(2, curr_page + 1)]
+    img1.save(args.output, "PDF", resolution=100.0, save_all=True, append_images=im_list)
+    print("done\n\nSuccessfully generated handwritten pdf from text at :\n{}".format(args.output))
+    return args.output

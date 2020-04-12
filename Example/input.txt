@@ -1,0 +1,27 @@
+Title: 8051 programming.
+Problem Definition: Write a 8051 Program to
+a) Add ‘n’ 8-bit nos. found in internal RAM location 40h onwards and store result in
+R6 and R7 register
+Aim: To understand concept of register bank, bit addressable area, internal memory
+organization, various addressing modes,
+Hardware and Software requirements: IBM PC, Keil software
+Algorithm:
+1. Start
+2. Load count value in register.
+3. Point Ro to internal memory location
+4. Clear Accumulator
+5. Add accumulator with memory contents pointed by R0
+6. If carry is not generated go to step8
+7. Increment R6
+8. Increment R0
+9. Decrement counter
+10. If counter is not zero go to step 5
+11. Store result of final addition in register R7
+12. Stop.
+Conclusion:
+We have studied to access internal memory.
+Result:
+Internal memory
+I: 0x40 01 02 03 04
+After addition
+R6=0 R7=0A
