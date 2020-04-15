@@ -170,12 +170,12 @@ def generate(args_text, args, sess, translation, text_color=[0, 0, 0]):
     line_height = -4
     num_lines = len(args_text) // 50
     text_remaining = len(args_text)
-    lines_per_page = 30
+    lines_per_page = 28
     curr_page = 1
     cuur_line = 1
 
     fig, ax = plt.subplots(1, 1)
-    plt.figure(num=None, figsize=(110, 5 * min(lines_per_page, text_remaining // 50 + args_text.count('\n'))), dpi=35,
+    plt.figure(num=None, figsize=(115, 5 * min(lines_per_page, text_remaining // 50 + args_text.count('\n'))), dpi=35,
                facecolor='w', edgecolor='k')
 
     print('Writing...')
@@ -213,7 +213,7 @@ def generate(args_text, args, sess, translation, text_color=[0, 0, 0]):
                 plt.axis('off')
                 figfile = BytesIO()
                 print("\n\nProcessing page No. {}...\nCreating image...".format(curr_page), flush=True)
-                plt.savefig(figfile, format='png')
+                plt.savefig(figfile, format='png', bbox_inches='tight')
                 figfile.seek(0)  # rewind to beginning of file
                 print("Colouring text...", flush=True)
                 figfile1 = add_color(text_color, figfile)
@@ -225,14 +225,20 @@ def generate(args_text, args, sess, translation, text_color=[0, 0, 0]):
                 from PIL import Image
                 img = Image.open(image_out)
                 img.load()
-                background = Image.new("RGB", img.size, (255, 255, 255))
-                background.paste(img, mask=img.split()[3])  # 3 is the alpha channel
+                img = img.resize((int(img.size[0] * 0.8), int(img.size[1] * 0.804)), Image.ANTIALIAS)
+                # background = Image.new("RGB", img.size, (255, 255, 255))
+                background = Image.open('blank_page.jpg')
+                background.load()
+                background.paste(img, mask=img.split()[3], box=(30, 220))  # 3 is the alpha channel
                 background.save(image_out.replace('.png', '.jpg'), 'JPEG', quality=100)
 
                 print("\nPage No. {} done!\n\n".format(curr_page), flush=True)
 
                 fig, ax = plt.subplots(1, 1)
-                plt.figure(num=None, figsize=(110, 5 * min(lines_per_page, text_remaining // 50 + args_text[args_text.index(text_without_spaces):].count('\n'))), dpi=35, facecolor='w',
+                plt.figure(num=None, figsize=(115, 5 * min(lines_per_page, text_remaining // 50 + args_text[
+                                                                                                 args_text.index(
+                                                                                                     text_without_spaces):].count(
+                    '\n'))), dpi=40, facecolor='w',
                            edgecolor='k')
                 curr_page += 1
                 currentX = 0
@@ -244,7 +250,7 @@ def generate(args_text, args, sess, translation, text_color=[0, 0, 0]):
     plt.axis('off')
     figfile = BytesIO()
     print("\n\nProcessing page No. {}...\nCreating image...".format(curr_page), flush=True)
-    plt.savefig(figfile, format='png')
+    plt.savefig(figfile, format='png', bbox_inches='tight')
     figfile.seek(0)  # rewind to beginning of file
     print("Colouring text...", flush=True)
     figfile1 = add_color(text_color, figfile)
@@ -256,8 +262,11 @@ def generate(args_text, args, sess, translation, text_color=[0, 0, 0]):
     from PIL import Image
     img = Image.open(image_out)
     img.load()
-    background = Image.new("RGB", img.size, (255, 255, 255))
-    background.paste(img, mask=img.split()[3])  # 3 is the alpha channel
+    img = img.resize((int(img.size[0] * 0.8), int(img.size[1] * 0.804)), Image.ANTIALIAS)
+    # background = Image.new("RGB", img.size, (255, 255, 255))
+    background = Image.open('blank_page.jpg')
+    background.load()
+    background.paste(img, mask=img.split()[3], box=(30,315))  # 3 is the alpha channel
     background.save(image_out.replace('.png', '.jpg'), 'JPEG', quality=100)
 
     print("\nPage No. {} done!\n\n".format(curr_page), flush=True)

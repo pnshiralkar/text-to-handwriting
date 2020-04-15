@@ -48,7 +48,7 @@ def main():
 
         if text is not None:
             if len(text) > 50:
-                pdf = generate.generate(text.replace('1', 'I'), args, sess, translation, [0, 0, 200])
+                pdf = generate.generate(text.replace('1', 'I'), args, sess, translation, [0, 0, 150])
             else:
                 print("Text too short! Atleast write that much by yourself!")
         else:
