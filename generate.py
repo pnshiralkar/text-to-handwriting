@@ -138,6 +138,9 @@ def add_color(color, image_out):
                 new_color = [color[x]
                              for x in range(3)]
                 img.putpixel((x, y), tuple(new_color))
+            else:
+                new_color = [255, 255, 255, 0]
+                img.putpixel((x, y), tuple(new_color))
     imgout = BytesIO()
     img.save(imgout, 'PNG')
     imgout.seek(0)
@@ -164,15 +167,15 @@ def generate(args_text, args, sess, translation, text_color=[0, 0, 0]):
     currentY = 0
     currentLen = 0
     line_length = 50
-    line_height = -6
+    line_height = -4
     num_lines = len(args_text) // 50
     text_remaining = len(args_text)
-    lines_per_page = 20
+    lines_per_page = 30
     curr_page = 1
     cuur_line = 1
 
     fig, ax = plt.subplots(1, 1)
-    plt.figure(num=None, figsize=(70, 5 * min(lines_per_page, text_remaining // 50 + args_text.count('\n'))), dpi=40,
+    plt.figure(num=None, figsize=(110, 5 * min(lines_per_page, text_remaining // 50 + args_text.count('\n'))), dpi=35,
                facecolor='w', edgecolor='k')
 
     print('Writing...')
@@ -229,7 +232,7 @@ def generate(args_text, args, sess, translation, text_color=[0, 0, 0]):
                 print("\nPage No. {} done!\n\n".format(curr_page), flush=True)
 
                 fig, ax = plt.subplots(1, 1)
-                plt.figure(num=None, figsize=(70, 5 * min(lines_per_page, text_remaining // 50 + args_text[args_text.index(text_without_spaces):].count('\n'))), dpi=40, facecolor='w',
+                plt.figure(num=None, figsize=(110, 5 * min(lines_per_page, text_remaining // 50 + args_text[args_text.index(text_without_spaces):].count('\n'))), dpi=35, facecolor='w',
                            edgecolor='k')
                 curr_page += 1
                 currentX = 0
