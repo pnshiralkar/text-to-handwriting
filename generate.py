@@ -12,16 +12,18 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--model', dest='model_path', type=str, default=os.path.join('pretrained', 'model-29'))
-parser.add_argument('--text', dest='text', type=str, default=None)
-parser.add_argument('--text-file', dest='file', type=str, default=None)
-parser.add_argument('--style', dest='style', type=int, default=None)
-parser.add_argument('--bias', dest='bias', type=float, default=1.)
+parser.add_argument('--model', dest='model_path', type=str, default=os.path.join('pretrained', 'model-29'),
+                    help='(optional) DL model to use')
+parser.add_argument('--text', dest='text', type=str, help='Text to write')
+parser.add_argument('--text-file', dest='file', type=str, default=None, help='Path to the input text file')
+parser.add_argument('--style', dest='style', type=int, default=0, help='Style of handwriting (1 to 7)')
+parser.add_argument('--bias', dest='bias', type=float, default=0.9,
+                    help='Bias in handwriting. More bias is more unclear handwriting (0.00 to 1.00)')
 parser.add_argument('--force', dest='force', action='store_true', default=False)
-parser.add_argument('--animation', dest='animation', action='store_true', default=False)
-parser.add_argument('--noinfo', dest='info', action='store_false', default=True)
-parser.add_argument('--save', dest='save', type=str, default=None)
-parser.add_argument('--output', dest='output', type=str, default='./handwritten.pdf')
+parser.add_argument('--color', dest='color_text', type=str, default='0,0,150',
+                    help='Color of handwriting in RGB format')
+parser.add_argument('--output', dest='output', type=str, default='./handwritten.pdf',
+                    help='Output PDF file path and name')
 args = parser.parse_args()
 
 
@@ -175,7 +177,8 @@ def generate(args_text, args, sess, translation, text_color=[0, 0, 0]):
     cuur_line = 1
 
     fig, ax = plt.subplots(1, 1)
-    plt.figure(num=None, figsize=(115, 5 * min(lines_per_page, text_remaining // 50 + args_text.count('\n'))), dpi=35,
+    plt.figure(num=None, figsize=(115, 5 * min(lines_per_page, text_remaining // line_length + args_text.count('\n'))),
+               dpi=35,
                facecolor='w', edgecolor='k')
 
     print('Writing...')
@@ -235,9 +238,9 @@ def generate(args_text, args, sess, translation, text_color=[0, 0, 0]):
                 print("\nPage No. {} done!\n\n".format(curr_page), flush=True)
 
                 fig, ax = plt.subplots(1, 1)
-                plt.figure(num=None, figsize=(115, 5 * min(lines_per_page, text_remaining // 50 + args_text[
-                                                                                                 args_text.index(
-                                                                                                     text_without_spaces):].count(
+                plt.figure(num=None, figsize=(115, 5 * min(lines_per_page, text_remaining // line_length + args_text[
+                                                                                                           args_text.index(
+                                                                                                               text_without_spaces):].count(
                     '\n'))), dpi=40, facecolor='w',
                            edgecolor='k')
                 curr_page += 1
@@ -266,7 +269,7 @@ def generate(args_text, args, sess, translation, text_color=[0, 0, 0]):
     # background = Image.new("RGB", img.size, (255, 255, 255))
     background = Image.open('blank_page.jpg')
     background.load()
-    background.paste(img, mask=img.split()[3], box=(30,315))  # 3 is the alpha channel
+    background.paste(img, mask=img.split()[3], box=(30, 315))  # 3 is the alpha channel
     background.save(image_out.replace('.png', '.jpg'), 'JPEG', quality=100)
 
     print("\nPage No. {} done!\n\n".format(curr_page), flush=True)
